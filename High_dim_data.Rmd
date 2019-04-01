@@ -1,0 +1,112 @@
+---
+title: "high_dimensional_data"
+author: "Wenyi Wang"
+date: "4/1/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup to generate data.
+
+```{r echo=FALSE}
+n_rows = 1000
+n_cols = 100
+
+k=3
+x_mus = c(0,5,5)
+x_sds = c(1,0.1,1)
+y_mus = c(5,5,0)
+y_sds = c(1,0.1,1)
+prop1 = c(0.3,0.5,0.2)
+
+comp1 <- sample(seq_len(k), prob=prop1, size=n_cols, replace=TRUE)
+samples1 <- cbind(rnorm(n=n_cols, mean=x_mus[comp1],sd=x_sds[comp1]),
+                  rnorm(n=n_cols, mean=y_mus[comp1],sd=y_sds[comp1]))
+
+options(max.print = 10000000)
+proj <- matrix(rnorm(n_rows* n_cols), nrow=n_rows, ncol=2)
+A1 <- samples1 %*% t(proj)
+A1 <- A1 + rnorm(n_rows*n_cols)
+
+K1 <- kmeans(A1, centers = 3, nstart = 50)
+tot_wss <- K1$withinss
+cluster1 <- K1$cluster
+tot_cluster <- mclust::adjustedRandIndex(cluster1, comp1)
+```
+
+
+## Computing optimal number of clusters
+```{r echo=FALSE}
+sum_wss <- 0
+for(j in 1:10) {
+  K1 <- kmeans(A1, centers = j, nstart = 50)
+  sum_wss[j] = sum(K1$withinss)
+}
+plot(1:10, sum_wss, type = "b", xlab = "Number of Clusters", ylab = "Within groups sum of squares",col= "black", pch = 20, cex = 0.5, lty = "solid", lwd = 2)
+```
+We can see by elbow method that k=3 will be optimal
+
+
+## Run 100 times and print WSS matrix
+```{r echo=FALSE}
+for(i in 2:100) {
+  comp1 <- sample(seq_len(k), prob=prop1, size=n_cols, replace=TRUE)
+  samples1 <- cbind(rnorm(n=n_cols, mean=x_mus[comp1],sd=x_sds[comp1]),
+                    rnorm(n=n_cols, mean=y_mus[comp1],sd=y_sds[comp1]))
+  
+  options(max.print = 10000000)
+  proj <- matrix(rnorm(n_rows* n_cols), nrow=n_rows, ncol=2)
+  A2 <- samples1 %*% t(proj)
+  A2 <- A2 + rnorm(n_rows*n_cols)
+
+  K2 <- kmeans(A2, centers = 3, nstart = 50)
+  tot_wss <- rbind(tot_wss, K2$withinss)
+  tot_cluster <- rbind(tot_cluster, mclust::adjustedRandIndex(K2$cluster, comp1))
+}
+print(tot_wss)
+```
+
+
+## Generating clustering ARI matrix
+```{r echo=FALSE}
+print(tot_cluster)
+```
+
+
+## Visualize att1 and att2 based on clustering
+```{r echo=FALSE}
+palette <- 0
+for(i in 1:100) {
+  if(cluster1[i] == 1) {
+    palette[i] = "black"
+  } else if(cluster1[i] == 2) {
+    palette[i] = "red"
+  } else {
+    palette[i] = "blue"
+  }
+}
+
+#plot dim1 and dim2 based on clustering
+att1 <- A1[,1]
+att2 <- A1[,2]
+plot(att1, att2, main="between att1 and att2", xlab="Attribute 1", ylab="Attribute 2", pch=20, col=palette)
+```
+
+```{r echo=FALSE}
+#plot dim999 and dim1000 based on clustering
+att999 <- A1[,999]
+att1000 <- A1[,1000]
+plot(att999, att1000, main="between att999 and att1000", xlab="Attribute 999", ylab="Attribute 1000", pch=20, col=palette)
+```
+
+```{r echo=FALSE}
+#plot dim500 and dim700 based on clustering
+att500 <- A1[,500]
+att700 <- A1[,700]
+plot(att500, att700, main="between att500 and att700", xlab="Attribute 500", ylab="Attribute 700", pch=20, col=palette)
+```
+
+
